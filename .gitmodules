@@ -30,3 +30,6 @@
 	path = external/omcdecoder
 	url = https://github.com/soulr344/OMCDecoder
 	ignore = dirty
+[submodule "external/samloader-rs"]
+	path = external/samloader-rs
+	url = https://github.com/topjohnwu/samloader-rs.git

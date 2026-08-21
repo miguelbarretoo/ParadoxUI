@@ -77,6 +77,7 @@ fi
     GET_BUILD_VAR "ROM_CODENAME"
     GET_BUILD_VAR "ROM_BUILD_TIMESTAMP" "$(date +%s)"
     GET_BUILD_VAR "SOURCE_FIRMWARE"
+    echo "SOURCE_FIRMWARE_VERSION=\"${SOURCE_FIRMWARE_VERSION:-}\""
     if [ "${#SOURCE_EXTRA_FIRMWARES[@]}" -ge 1 ]; then
         echo "SOURCE_EXTRA_FIRMWARES=\"$(IFS=":"; printf '%s' "${SOURCE_EXTRA_FIRMWARES[*]}")\""
     else
@@ -95,6 +96,7 @@ fi
         echo "TARGET_ASSERT_MODEL=\"\""
     fi
     GET_BUILD_VAR "TARGET_FIRMWARE"
+    echo "TARGET_FIRMWARE_VERSION=\"${TARGET_FIRMWARE_VERSION:-}\""
     if [ "${#TARGET_EXTRA_FIRMWARES[@]}" -ge 1 ]; then
         echo "TARGET_EXTRA_FIRMWARES=\"$(IFS=":"; printf '%s' "${TARGET_EXTRA_FIRMWARES[*]}")\""
     else
