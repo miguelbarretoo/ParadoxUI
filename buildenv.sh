@@ -102,10 +102,8 @@ run_cmd()
     fi
 }
 
-alias unica=run_cmd
-alias monsterrom=run_cmd
-alias erom=run_cmd
-alias m="./scripts/make_rom.sh"
+alias paradox=run_cmd
+alias dive="./scripts/make_rom.sh"
 
 # https://android.googlesource.com/platform/build/+/refs/tags/android-15.0.0_r1/envsetup.sh#806
 croot()

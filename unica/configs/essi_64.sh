@@ -15,11 +15,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-# ExtremeROM configuration file for Snapdragon devices (qssi)
+# ParadoxUI configuration file for Snapdragon devices (qssi)
 
 # Galaxy S26+  (One UI 8.5)
 SOURCE_CODENAME="m2s"
-SOURCE_FIRMWARE="SM-S947B/XXV/R5GYC4S8GWT"
+SOURCE_FIRMWARE="SM-S947B/ACR/R5GYC4S8GWT"
+SOURCE_FIRMWARE_VERSION="S947BXXS4AZHA/S947BOXM4AZHA/S947BXXS4AZHA"
 SOURCE_EXTRA_FIRMWARES=()
 SOURCE_API_LEVEL=36
 SOURCE_PRODUCT_FIRST_API_LEVEL=36

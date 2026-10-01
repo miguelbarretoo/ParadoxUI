@@ -34,11 +34,21 @@ if [[ $TARGET_SINGLE_SYSTEM_IMAGE == "qssi" || $TARGET_SINGLE_SYSTEM_IMAGE == "e
     LOG_STEP_OUT
 
     LOG_STEP_IN "- Setting props"
+    # Vendor
     SET_PROP "vendor" "ro.vendor.product.cpu.abilist" "arm64-v8a"
     SET_PROP "vendor" "ro.vendor.product.cpu.abilist32" ""
     SET_PROP "vendor" "ro.vendor.product.cpu.abilist64" "arm64-v8a"
     SET_PROP "vendor" "ro.zygote" "zygote64"
     SET_PROP "vendor" "dalvik.vm.dex2oat64.enabled" "true"
+    # ODM
+    SET_PROP "odm" "ro.odm.product.cpu.abilist" "arm64-v8a"
+    SET_PROP "odm" "ro.odm.product.cpu.abilist32" ""
+    SET_PROP "odm" "ro.odm.product.cpu.abilist64" "arm64-v8a"
+    # System
+    SET_PROP "system" "ro.system.product.cpu.abilist" "arm64-v8a"
+    SET_PROP "system" "ro.system.product.cpu.abilist32" ""
+    SET_PROP "system" "ro.system.product.cpu.abilist64" "arm64-v8a"
+
     LOG_STEP_OUT
 
     LOG_STEP_OUT

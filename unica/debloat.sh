@@ -53,6 +53,7 @@ VENDOR_DEBLOAT+="
 recovery-from-boot.p
 bin/install-recovery.sh
 etc/init/vendor_flash_recovery.rc
+etc/recovery-resource.dat
 "
 
 # PDP apps
@@ -64,11 +65,16 @@ truncate -s 0 "$WORK_DIR/system/system/etc/vpl_apks_count_list.txt"
 
 # eSIM
 [[ "$TARGET_COMMON_SUPPORT_EMBEDDED_SIM" == "false" ]] && SYSTEM_DEBLOAT+="
+system/etc/autoinstalls/autoinstalls-com.google.android.euicc
+system/etc/default-permissions/default-permissions-com.google.android.euicc.xml
 system/etc/permissions/privapp-permissions-com.samsung.android.app.esimkeystring.xml
+system/etc/permissions/privapp-permissions-com.samsung.android.app.telephonyui.esimclient.xml
 system/etc/permissions/privapp-permissions-com.samsung.euicc.xml
 system/etc/sysconfig/preinstalled-packages-com.samsung.android.app.esimkeystring.xml
 system/etc/sysconfig/preinstalled-packages-com.samsung.euicc.xml
+system/priv-app/EsimClient
 system/priv-app/EsimKeyString
+system/priv-app/EuiccGoogle
 system/priv-app/EuiccService
 "
 
@@ -204,21 +210,12 @@ system/etc/permissions/privapp-permissions-com.samsung.android.dqagent.xml
 system/etc/permissions/privapp-permissions-com.sec.android.diagmonagent.xml
 system/etc/permissions/privapp-permissions-com.sec.android.soagent.xml
 system/priv-app/DeviceQualityAgent36
+system/priv-app/DiagMonAgent91
 system/priv-app/DiagMonAgent95
 system/priv-app/SOAgent76
 "
 
 SET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_CONTEXTSERVICE_ENABLE_SURVEY_MODE" --delete
-
-# Samsung AR Emoji
-SYSTEM_DEBLOAT+="
-system/etc/default-permissions/default-permissions-com.sec.android.mimage.avatarstickers.xml
-system/etc/permissions/privapp-permissions-com.samsung.android.aremojieditor.xml
-system/etc/permissions/privapp-permissions-com.sec.android.mimage.avatarstickers.xml
-system/etc/permissions/signature-permissions-com.sec.android.mimage.avatarstickers.xml
-system/priv-app/AREmojiEditor
-system/priv-app/AvatarEmojiSticker
-"
 
 # Samsung Calendar
 SYSTEM_DEBLOAT+="
@@ -233,12 +230,6 @@ system/app/ClockPackage
 # Samsung Free
 SYSTEM_DEBLOAT+="
 system/app/MinusOnePage
-"
-
-# Samsung Language Core
-SYSTEM_DEBLOAT+="
-system/etc/permissions/signature-permissions-com.samsung.android.offline.languagemodel.xml
-system/priv-app/OfflineLanguageModel_stub
 "
 
 # Samsung Messages
@@ -271,6 +262,7 @@ system/app/SmartReminder
 # Samsung Visit In
 SYSTEM_DEBLOAT+="
 system/etc/permissions/privapp-permissions-com.samsung.android.ipsgeofence.xml
+system/etc/com.samsung.feature.ipsgeofence.xml
 system/priv-app/IpsGeofence
 "
 
@@ -350,3 +342,203 @@ system/etc/sysconfig/feature-a11y-preload-voacc.xml
 PRODUCT_DEBLOAT+="
 app/YouTube
 "
+
+SYSTEM_DEBLOAT+="
+system/bin/fabric_crypto
+system/etc/init/fabric_crypto.rc
+system/etc/permissions/FabricCryptoLib.xml
+system/etc/permissions/privapp-permissions-com.baidu.location.fused.xml
+system/etc/sysconfig/pushservicecn.xml
+system/etc/vintf/manifest/fabric_crypto_manifest.xml
+system/framework/FabricCryptoLib.jar
+system/framework/oat/arm/FabricCryptoLib.odex
+system/framework/oat/arm/FabricCryptoLib.vdex
+system/framework/oat/arm64/FabricCryptoLib.odex
+system/framework/oat/arm64/FabricCryptoLib.vdex
+system/lib/libBDoeminfo_baidu.so
+system/lib/libBDoeminfo_baidusearch.so
+system/lib64/com.samsung.security.fabric.cryptod-V1-cpp.so
+system/lib64/vendor.samsung.hardware.security.fkeymaster-V1-ndk.so
+system/priv-app/KmxService
+system/priv-app/MediaSearch
+system/etc/mediasearch
+system/skt
+system/tts
+"
+
+DEBLOAT_APPS="ccinfo
+EasySetup
+MyDevice
+NSDSWebApp
+NSFusedLocation_v6.0
+SmartSwitchAgent
+SmartSwitchStub
+AASAservice
+DckTimeSyncService
+EnhancedAttestationAgent
+HdmApk
+MCFDeviceSync
+Moments
+OdaService
+PrivateAccessTokens
+SafetyInformation
+SDMConfig
+AirGlance
+AirReadingGlass
+AndroidGlassesCore
+SOAgent77
+BGMProvider
+SingleTakeService
+BixbyWakeup
+Fast
+FunModeSDK
+KidsHome_Installer
+LinkSharing_v11
+MdecService
+MoccaMobile
+Netflix_stub
+PhotoTable
+UnifiedWFC
+VideoEditorLite_Dream_N
+VTCameraSetting
+WifiGuider
+serviceModeApp_FB
+EarphoneTypeC
+HashTagService
+MemorySaver_O_Refresh
+MultiControl
+MultiControlVP6
+OMCAgent5
+OneStoreService
+SOAgent7
+SOAgent75
+SolarAudio-service
+TADownloader
+TalkbackSE
+TaPackAuthFw
+UltraDataSaving_O
+Upday
+VexScanner
+Duo
+Photos
+AndroidDeveloperVerifier
+YourPhone_Stub
+AndroidAutoStub
+GoogleRestore
+SamsungBilling
+KnoxFrameBufferProvider
+KnoxGuard
+Rampart
+knoxanalyticsagent
+KnoxERAgent
+KnoxMposAgent
+KnoxPushManager
+KPECore
+KLMSAgent
+MDMApp
+UniversalMDMClient
+UnifiedVVM
+UnifiedTetheringProvision
+UsByod
+WebManual
+DictDiotekForSec
+VzCloud
+OmcAgent5
+SetupWizardLegalProvider
+SPPPushClient
+HiyaService
+Discover
+DiscoverSEP
+LinkToWindowsService
+SwiftkeyIme
+SwiftkeySetting
+SystemUpdate
+ChromeCustomizations
+com.google.mainline.adservices
+com.google.mainline.telemetry
+GoogleFeedback
+GoogleLocationHistory
+GoogleCalendarSyncAdapter
+FamilyLinkParentalControls
+AutomationTest_FB
+DRParser
+SEMFactoryApp
+UwbTest
+sec_camerax_service
+SmartEpdgTestApp
+NetworkDiagnostic
+SBrowser
+GearManagerStub
+SamsungWallet
+BlockchainBasicKit
+wssyncmldm
+GameOptimizingService
+GooglePrintRecommendationService
+PrivacyDashboard
+ParentalCare
+ImsLogger
+EarthquakeWarning
+StickerCenter
+KTAuth
+KTCustomerService
+KTUsimManager
+LGUMiniCustomerCenter
+LGUplusTsmProxy
+SKTMemberShip_new
+SktUsimService
+TWorld
+KT114Provider2
+KTHiddenMenu
+KTOneStore
+KTServiceAgent
+KTServiceMenu
+LGUGPSnWPS
+LGUHiddenMenu
+LGUOZStore
+SKTFindLostPhone
+SKTHiddenMenu
+SKTMemberShip
+SKTOneStore
+SKTFindLostPhoneApp
+TPhoneOnePackage
+TPhoneSetup
+TService
+UsimRegistrationKOR
+HpsAgreement_new
+KTAuth_Stub
+TencentWifiSecurity
+TNCPageCN
+TouchToSearch_None_CTS
+ChatPPCN
+CarLinkApp
+Firewall
+HongbaoAssistant
+ChinaUnionPay
+ChinaHiddenMenu
+ChnFileShareKitService
+YourPhone_China
+LinkToWindowsService_China
+GimbalTrackingKit
+FusedLocation_Baidu
+MinorMode
+SightCare
+EasymodeContactsWidget81
+SamsungYellowPage
+PushServiceCN
+BudsUniteManager
+SendHelpMessage
+SketchBook
+SecSoterService
+SoterSskdsService
+"
+
+for DEBLOAT_APP in $DEBLOAT_APPS; do
+    SYSTEM_DEBLOAT+="
+$(find "$WORK_DIR/system/system/app" "$WORK_DIR/system/system/priv-app" -maxdepth 1 -type d -name "$DEBLOAT_APP" 2>/dev/null | sed "s|$WORK_DIR/system/||g")"
+    SYSTEM_EXT_DEBLOAT+="
+$(find "$WORK_DIR/system_ext/app" "$WORK_DIR/system_ext/priv-app" -maxdepth 1 -type d -name "$DEBLOAT_APP" 2>/dev/null | sed "s|$WORK_DIR/system_ext/||g")"
+    PRODUCT_DEBLOAT+="
+$(find "$WORK_DIR/product/app" "$WORK_DIR/product/priv-app" -maxdepth 1 -type d -name "$DEBLOAT_APP" 2>/dev/null | sed "s|$WORK_DIR/product/||g")"
+done
+
+unset DEBLOAT_APPS DEBLOAT_APP

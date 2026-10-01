@@ -1,20 +1,6 @@
 #!/usr/bin/env bash
-#
-# Copyright (C) 2025 Salvo Giangreco
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
+# Copyright (c) 2025 Salvo Giangreco
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 # [
 source "$SRC_DIR/scripts/utils/build_utils.sh" || exit 1
@@ -22,6 +8,8 @@ source "$SRC_DIR/scripts/utils/build_utils.sh" || exit 1
 FORCE=false
 FS_TYPE=""
 SPARSE=false
+AVB_SIGN=""
+MAP_FILE=false
 INPUT_DIR=""
 PARTITION=""
 IMAGE_SIZE=""
@@ -34,11 +22,23 @@ FS_CONFIG_FILE=""
 # https://android.googlesource.com/platform/build/+/refs/tags/android-15.0.0_r1/tools/releasetools/build_image.py#266
 BUILD_IMAGE_MKFS()
 {
+    local SPARSE=$SPARSE
+    local MANUAL_SPARSE=false
+
+    # Avoid OOM errors when building as sparse image
+    if $SPARSE && [[ "$(awk '/MemTotal/ { print int ($2 / 1024) }' "/proc/meminfo")" -lt "10240" ]]; then
+        SPARSE=false
+        MANUAL_SPARSE=true
+    fi
+
     local BUILD_CMD
 
     case "$FS_TYPE" in
         "ext4")
             BUILD_CMD+="mkuserimg_mke2fs "
+            if $SPARSE; then
+                BUILD_CMD+="-s "
+            fi
             BUILD_CMD+="\"$INPUT_DIR\" \"$OUTPUT_FILE\" \"ext4\" \"$MOUNT_POINT\" "
             BUILD_CMD+="\"$IMAGE_SIZE\" "
             # https://android.googlesource.com/platform/build/+/refs/tags/android-15.0.0_r1/tools/releasetools/build_image.py#808
@@ -46,6 +46,9 @@ BUILD_IMAGE_MKFS()
             # https://android.googlesource.com/platform/build/+/refs/tags/android-15.0.0_r1/tools/releasetools/build_image.py#49
             BUILD_CMD+="-T \"1230735600\" "
             BUILD_CMD+="-C \"$FS_CONFIG_FILE\" "
+            if $MAP_FILE; then
+                BUILD_CMD+="-B \"${OUTPUT_FILE//.img/.map}\" "
+            fi
             BUILD_CMD+="-L \"$MOUNT_POINT\" "
             if [ "$INODES" ]; then
                 BUILD_CMD+="-i \"$INODES\" "
@@ -76,7 +79,13 @@ BUILD_IMAGE_MKFS()
         "erofs")
             BUILD_CMD+="mkfs.erofs "
             # https://android.googlesource.com/platform/build/+/refs/tags/android-15.0.0_r1/core/Makefile#2084
-            BUILD_CMD+="-z \"lz4hc,9\" "
+            if $DEBUG; then
+                # Fast iteration profile. EROFS remains compressed and fully
+                # flashable, but avoids the expensive high-compression search.
+                BUILD_CMD+="-z \"lz4\" "
+            else
+                BUILD_CMD+="-z \"lz4hc,9\" "
+            fi
             BUILD_CMD+="-b \"4096\" "
             BUILD_CMD+="--mount-point \"$MOUNT_POINT\" "
             BUILD_CMD+="--fs-config-file \"$FS_CONFIG_FILE\" "
@@ -84,16 +93,27 @@ BUILD_IMAGE_MKFS()
             # Samsung uses a different default fixed timestamp for erofs/f2fs
             BUILD_CMD+="-T \"1640995200\" "
             BUILD_CMD+="\"$OUTPUT_FILE\" \"$INPUT_DIR\""
+
+            # mkfs.erofs has no built-in sparse support
+            if $SPARSE; then
+                MANUAL_SPARSE=true
+            fi
             ;;
         "f2fs")
             BUILD_CMD+="mkf2fsuserimg "
             BUILD_CMD+="\"$OUTPUT_FILE\" \"$IMAGE_SIZE\" "
+            if $SPARSE; then
+                BUILD_CMD+="-S "
+            fi
             BUILD_CMD+="-C \"$FS_CONFIG_FILE\" "
             BUILD_CMD+="-f \"$INPUT_DIR\" "
             BUILD_CMD+="-s \"$FILE_CONTEXT_FILE\" "
             BUILD_CMD+="-t \"$MOUNT_POINT\" "
             # Samsung uses a different default fixed timestamp for erofs/f2fs
             BUILD_CMD+="-T \"1640995200\" "
+            if $MAP_FILE; then
+                BUILD_CMD+="-B \"${OUTPUT_FILE//.img/.map}\" "
+            fi
             BUILD_CMD+="-L \"$MOUNT_POINT\" "
             # https://android.googlesource.com/platform/build/+/refs/tags/android-15.0.0_r1/tools/releasetools/build_image.py#818
             BUILD_CMD+="--readonly "
@@ -108,10 +128,75 @@ BUILD_IMAGE_MKFS()
 
     EVAL "$BUILD_CMD" || exit 1
 
-    if $SPARSE; then
+    if $MANUAL_SPARSE; then
         EVAL "img2simg \"$OUTPUT_FILE\" \"$OUTPUT_FILE.sparse\"" || exit 1
         mv -f "$OUTPUT_FILE.sparse" "$OUTPUT_FILE"
     fi
+}
+
+# https://android.googlesource.com/platform/build/+/refs/tags/android-15.0.0_r1/tools/releasetools/verity_utils.py#224
+CALCULATE_AVB_MAX_IMAGE_SIZE() { avbtool add_hashtree_footer --partition_size "$1" --calc_max_image_size; }
+
+# https://android.googlesource.com/platform/build/+/refs/tags/android-15.0.0_r1/tools/releasetools/verity_utils.py#157
+CALCULATE_AVB_MIN_PARTITION_SIZE()
+{
+    local IMAGE_RATIO
+    local MAX_IMAGE_SIZE
+    local PARTITION_SIZE
+    local LOW
+    local MID
+    local HIGH
+    local DELTA
+
+    # Use image size as partition size to approximate final partition size.
+    IMAGE_RATIO="$(bc -l <<< "$(CALCULATE_AVB_MAX_IMAGE_SIZE "$IMAGE_SIZE") / $IMAGE_SIZE")"
+
+    # Prepare a binary search for the optimal partition size.
+    LOW="$(bc -l <<< "scale=0; $(bc -l <<< "$IMAGE_SIZE / $IMAGE_RATIO") / 4096")"
+    LOW="$(bc -l <<< "($LOW * 4096) - 4096")"
+
+    # Ensure lo is small enough: max_image_size should <= image_size.
+    DELTA="4096"
+    MAX_IMAGE_SIZE="$(CALCULATE_AVB_MAX_IMAGE_SIZE "$LOW")"
+    while [[ "$MAX_IMAGE_SIZE" -gt "$IMAGE_SIZE" ]]; do
+        IMAGE_RATIO="$(bc -l <<< "$MAX_IMAGE_SIZE / $LOW")"
+        LOW="$(bc -l <<< "scale=0; $(bc -l <<< "$IMAGE_SIZE / $IMAGE_RATIO") / 4096")"
+        LOW="$(bc -l <<< "($LOW * 4096) - $DELTA")"
+        DELTA="$(bc -l <<< "$DELTA * 2")"
+        MAX_IMAGE_SIZE="$(CALCULATE_AVB_MAX_IMAGE_SIZE "$LOW")"
+    done
+
+    HIGH="$(bc -l <<< "$LOW + 4096")"
+
+    # Ensure hi is large enough: max_image_size should >= image_size.
+    DELTA="4096"
+    MAX_IMAGE_SIZE="$(CALCULATE_AVB_MAX_IMAGE_SIZE "$HIGH")"
+    while [[ "$MAX_IMAGE_SIZE" -lt "$IMAGE_SIZE" ]]; do
+        IMAGE_RATIO="$(bc -l <<< "$MAX_IMAGE_SIZE / $HIGH")"
+        HIGH="$(bc -l <<< "scale=0; $(bc -l <<< "$IMAGE_SIZE / $IMAGE_RATIO") / 4096")"
+        HIGH="$(bc -l <<< "($HIGH * 4096) + $DELTA")"
+        DELTA="$(bc -l <<< "$DELTA * 2")"
+        MAX_IMAGE_SIZE="$(CALCULATE_AVB_MAX_IMAGE_SIZE "$HIGH")"
+    done
+
+    PARTITION_SIZE="$HIGH"
+
+    # Start to binary search.
+    while [[ "$LOW" -lt "$HIGH" ]]; do
+        MID="$(bc -l <<< "scale=0; ($(bc -l <<< "$LOW + $HIGH")) / (2 * 4096)")"
+        MID="$(bc -l <<< "$MID * 4096")"
+        MAX_IMAGE_SIZE="$(CALCULATE_AVB_MAX_IMAGE_SIZE "$MID")"
+        if [[ "$MAX_IMAGE_SIZE" -ge "$IMAGE_SIZE" ]]; then # if mid can accommodate image_size
+            if [[ "$MID" -lt "$PARTITION_SIZE" ]]; then # if a smaller partition size is found
+                PARTITION_SIZE="$MID"
+            fi
+            HIGH="$MID"
+        else
+            LOW="$(bc -l <<< "$MID + 4096")"
+        fi
+    done
+
+    echo "$PARTITION_SIZE"
 }
 
 # https://android.googlesource.com/platform/build/+/refs/tags/android-15.0.0_r1/tools/releasetools/build_image.py#247
@@ -130,6 +215,22 @@ CALCULATE_SIZE_AND_RESERVED()
     fi
 
     echo "$SIZE"
+}
+
+# https://android.googlesource.com/platform/build/+/refs/tags/android-15.0.0_r1/tools/releasetools/verity_utils.py#264
+GET_AVBTOOL_CMD()
+{
+    local CMD
+
+    CMD+="avbtool add_hashtree_footer "
+    CMD+="--image \"$OUTPUT_FILE\" "
+    CMD+="--partition_size \"$IMAGE_SIZE\" "
+    CMD+="--partition_name \"$PARTITION\" "
+    CMD+="--hash_algorithm \"sha256\" "
+    CMD+="--algorithm \"SHA256_RSA4096\" "
+    CMD+="--key \"$SRC_DIR/security/avb/testkey_rsa4096.pem\""
+
+    echo "$CMD"
 }
 
 # https://android.googlesource.com/platform/build/+/refs/tags/android-15.0.0_r1/tools/releasetools/build_image.py#77
@@ -163,8 +264,15 @@ PREPARE_SCRIPT()
     shift
 
     while [[ "$1" == "-"* ]]; do
-        if [[ "$1" == "--force" ]] || [[ "$1" == "-f" ]]; then
+        if [[ "$1" == "--avb" ]] || [[ "$1" == "--no-avb" ]]; then
+            if [ ! "$AVB_SIGN" ]; then
+                [[ "$1" == "--avb" ]] && AVB_SIGN=true
+                [[ "$1" == "--no-avb" ]] && AVB_SIGN=false
+            fi
+        elif [[ "$1" == "--force" ]] || [[ "$1" == "-f" ]]; then
             FORCE=true
+        elif [[ "$1" == "--generate-map" ]] || [[ "$1" == "-m" ]]; then
+            MAP_FILE=true
         elif [[ "$1" == "--inodes" ]] || [[ "$1" == "-i" ]]; then
             shift; INODES="$1"
             if ! [[ "$INODES" =~ ^[+-]?[0-9]+$ ]]; then
@@ -200,6 +308,14 @@ PREPARE_SCRIPT()
 
         shift
     done
+
+    if [ ! "$AVB_SIGN" ]; then
+        if $TARGET_DISABLE_AVB_SIGNING; then
+            AVB_SIGN=false
+        else
+            AVB_SIGN=true
+        fi
+    fi
 
     INPUT_DIR="$1"
     if [ ! "$INPUT_DIR" ]; then
@@ -261,8 +377,10 @@ PREPARE_SCRIPT()
 PRINT_USAGE()
 {
     echo "Usage: build_fs_image <fs> [options] <dir> <file_context> <fs_config>" >&2
+    echo " --avb/--no-avb : Enables/disables AVB signing" >&2
     echo " -f, --force : Force delete output file" >&2
     echo " -i, --inodes : (ext4 only) Specify the extfs inodes count" >&2
+    echo " -m, --generate-map : Generates block map file" >&2
     echo " -o, --output : Specify the output image path, defaults to the parent input directory" >&2
     echo " -p, --partition-name : Specify the partition name, defaults to the input directory name" >&2
     echo " -s, --partition-size : Specify the partition size, defaults to the smallest possible" >&2
@@ -281,15 +399,15 @@ ROUND_UP_TO_4K()
 
 PREPARE_SCRIPT "$@"
 
-if $DEBUG; then
-    if $SPARSE; then
-        LOG_STEP_IN "- Starting build_fs_image for $(basename "$OUTPUT_FILE") ($FS_TYPE+sparse)..."
-    else
-        LOG_STEP_IN "- Starting build_fs_image for $(basename "$OUTPUT_FILE") ($FS_TYPE)..."
-    fi
+if $SPARSE; then
+    LOG_STEP_IN "- Starting build_fs_image for $(basename "$OUTPUT_FILE") ($FS_TYPE+sparse)..."
+else
+    LOG_STEP_IN "- Starting build_fs_image for $(basename "$OUTPUT_FILE") ($FS_TYPE)..."
 fi
 
 if [ ! "$IMAGE_SIZE" ]; then
+    LOG_STEP_IN "! Partition size is not set, detecting minimum size"
+
     if [[ "$FS_TYPE" == "erofs" ]]; then
         BUILD_IMAGE_MKFS
         IMAGE_SIZE="$(GET_IMAGE_SIZE "$OUTPUT_FILE")"
@@ -297,9 +415,7 @@ if [ ! "$IMAGE_SIZE" ]; then
         IMAGE_SIZE="$(GET_DISK_USAGE "$INPUT_DIR")"
     fi
 
-    if $DEBUG; then
-        LOG "- The tree size of $(basename "$OUTPUT_FILE") is $IMAGE_SIZE bytes ($(bc -l <<< "scale=0; $IMAGE_SIZE / 1048576") MB)"
-    fi
+    LOG "- The tree size of $(basename "$OUTPUT_FILE") is $IMAGE_SIZE bytes ($(bc -l <<< "scale=0; $IMAGE_SIZE / 1048576") MB)"
 
     IMAGE_SIZE="$(CALCULATE_SIZE_AND_RESERVED "$IMAGE_SIZE")"
     IMAGE_SIZE="$(ROUND_UP_TO_4K "$IMAGE_SIZE")"
@@ -309,10 +425,7 @@ if [ ! "$IMAGE_SIZE" ]; then
             INODES="$(GET_INODE_USAGE "$INPUT_DIR")"
         fi
 
-        if $DEBUG; then
-            LOG "- First pass for $(basename "$OUTPUT_FILE") based on estimates of $IMAGE_SIZE bytes ($(bc -l <<< "scale=0; $IMAGE_SIZE / 1048576") MB) and $INODES inodes"
-        fi
-
+        LOG "- First pass based on estimates of $IMAGE_SIZE bytes ($(bc -l <<< "scale=0; $IMAGE_SIZE / 1048576") MB) and $INODES inodes"
         SPARSE=false BUILD_IMAGE_MKFS
 
         IMAGE_INFO="$(tune2fs -l "$OUTPUT_FILE")"
@@ -333,9 +446,7 @@ if [ ! "$IMAGE_SIZE" ]; then
         [[ "$SPARE_INODES" -lt 1 ]] && SPARE_INODES=1
         INODES="$(bc -l <<< "$INODES + $SPARE_INODES")"
 
-        if $DEBUG; then
-            LOG "- Allocating $INODES inodes for $(basename "$OUTPUT_FILE")"
-        fi
+        LOG "- Allocating $INODES inodes for $(basename "$OUTPUT_FILE")"
     elif [[ "$FS_TYPE" == "f2fs" ]]; then
         # HACK f2fs doesn't seems to like images smaller than 22 MB
         [[ "$IMAGE_SIZE" -lt "23068672" ]] && IMAGE_SIZE="23068672"
@@ -353,15 +464,27 @@ if [ ! "$IMAGE_SIZE" ]; then
         IMAGE_SIZE="$((BLOCK_COUNT << LOG_BLOCKSIZE))"
     fi
 
-    if $DEBUG; then
-        LOG "- Allocating $IMAGE_SIZE bytes ($(bc -l <<< "scale=0; $IMAGE_SIZE / 1048576") MB) for $(basename "$OUTPUT_FILE")"
+    if $AVB_SIGN; then
+        IMAGE_SIZE="$(CALCULATE_AVB_MIN_PARTITION_SIZE)"
     fi
+
+    LOG "- Allocating $IMAGE_SIZE bytes ($(bc -l <<< "scale=0; $IMAGE_SIZE / 1048576") MB) for $(basename "$OUTPUT_FILE")"
 
     LOG_STEP_OUT
 fi
 
+LOG "- Building image"
 if [ ! -f "$OUTPUT_FILE" ]; then
-    BUILD_IMAGE_MKFS
+    if $AVB_SIGN; then
+        IMAGE_SIZE="$(CALCULATE_AVB_MAX_IMAGE_SIZE "$IMAGE_SIZE")" BUILD_IMAGE_MKFS
+    else
+        BUILD_IMAGE_MKFS
+    fi
+fi
+
+if $AVB_SIGN; then
+    LOG "- Signing image with AVB"
+    EVAL "$(GET_AVBTOOL_CMD)" || exit 1
 fi
 
 LOG_STEP_OUT

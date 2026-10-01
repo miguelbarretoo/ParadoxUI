@@ -44,43 +44,12 @@ BUILD()
 
     LOG "- Building ${INPUT_FILE//$WORK_DIR/}"
 
-    # DEX format version might not be matching minSdkVersion, currently we handle
-    # baksmali manually as apktool will by default use minSdkVersion when available
-    # instead of the actual DEX format version used in the input apk
-    if [ -d "$OUTPUT_PATH/smali" ]; then
-        local DEX_API_LEVEL
-        local DEX_FILENAME
-
-        while IFS= read -r d; do
-            DEX_API_LEVEL="$(cat "$OUTPUT_PATH/../dex_api_version" 2> /dev/null)"
-
-            # https://github.com/google/smali/blob/3.0.9/dexlib2/src/main/java/com/android/tools/smali/dexlib2/VersionMap.java#L55-L79
-            if [ ! "$DEX_API_LEVEL" ] || [[ "$DEX_API_LEVEL" -gt "35" ]]; then
-                LOGE "Unvalid DEX API level: $DEX_API_LEVEL"
-                exit 1
-            fi
-
-            if [[ "$d" == *"smali" ]]; then
-                DEX_FILENAME="classes.dex"
-            else
-                DEX_FILENAME="$(basename "${d//smali_/}").dex"
-            fi
-
-            EVAL "smali a -a \"$DEX_API_LEVEL\" -j \"$THREAD_COUNT\" -o \"$OUTPUT_PATH/$DEX_FILENAME\" \"$d\"" &
-        done < <(find "$OUTPUT_PATH" -maxdepth 1 -type d -name "smali*")
-
-        # shellcheck disable=SC2046
-        wait $(jobs -p) || exit 1
-    fi
-
     # Copy original META-INF
     mkdir -p "$OUTPUT_PATH/build/apk"
     cp -a "$OUTPUT_PATH/original/META-INF" "$OUTPUT_PATH/build/apk/META-INF"
 
     # Build APK with --shorten-resource-paths (https://developer.android.com/tools/aapt2#optimize_options)
     EVAL "apktool b -j \"$THREAD_COUNT\" -p \"$FRAMEWORK_DIR\" \"$OUTPUT_PATH\"" || exit 1
-
-    find "$OUTPUT_PATH" -maxdepth 1 -type f -name "*.dex" -delete
 
     local FILE_NAME
     FILE_NAME="$(basename "$INPUT_FILE")"
@@ -131,38 +100,20 @@ DECODE()
     # - Disabled debug info
     # - Use .locals directive instead of the .registers one
     # - Use a sequential numbering scheme for labels
-    EVAL "apktool d -b -j \"$THREAD_COUNT\" -o \"$OUTPUT_PATH\" -p \"$FRAMEWORK_DIR\" -t \"$FRAMEWORK_TAG\" -s $ARGS \"$INPUT_FILE\"" || exit 1
+    #
+    # Apktool 3.x enumerates every DEX embedded in a ZIP entry, so containers
+    # holding multiple logical DEX (e.g. services.jar on One UI 8.x) decode into
+    # smali/ plus smali_classesN/ without losing classes.
+    EVAL "apktool d --no-debug-info -j \"$THREAD_COUNT\" -o \"$OUTPUT_PATH\" -p \"$FRAMEWORK_DIR\" -t \"$FRAMEWORK_TAG\" $ARGS \"$INPUT_FILE\"" || exit 1
 
-    # DEX format version might not be matching minSdkVersion, currently we handle
-    # baksmali manually as apktool will by default use minSdkVersion when available
-    # instead of the actual DEX format version used in the input apk
-    if [ -f "$OUTPUT_PATH/classes.dex" ]; then
-        local DEX_API_LEVEL
-        local SMALI_OUT
-
-        while IFS= read -r f; do
-            DEX_API_LEVEL="$(DEX_TO_API "$f")"
-            [ "$DEX_API_LEVEL" ] || exit 1
-            echo -n "$DEX_API_LEVEL" > "$OUTPUT_PATH/../dex_api_version"
-
-            if [[ "$f" == *"classes.dex" ]]; then
-                SMALI_OUT="smali"
-            else
-                SMALI_OUT="smali_$(basename "${f//.dex/}")"
-            fi
-
-            # Disassemble DEX file with the following flags:
-            # - Disabled synthetic accessors comments
-            # - Disabled debug info
-            # - Use .locals directive instead of the .registers one
-            # - Use a sequential numbering scheme for labels
-            EVAL "baksmali d -a \"$DEX_API_LEVEL\" --ac false --di false -j \"$THREAD_COUNT\" -l -o \"$OUTPUT_PATH/$SMALI_OUT\" --sl \"$f\"" &
-        done < <(find "$OUTPUT_PATH" -maxdepth 1 -type f -name "*.dex")
-
-        # shellcheck disable=SC2046
-        wait $(jobs -p) || exit 1
-
-        find "$OUTPUT_PATH" -maxdepth 1 -type f -name "*.dex" -delete
+    EXPECTED_CLASS_COUNT="$(count_dex_classes "$INPUT_FILE")"
+    if [ "$EXPECTED_CLASS_COUNT" -gt 0 ]; then
+        local DECODED_CLASS_COUNT
+        DECODED_CLASS_COUNT="$(find "$OUTPUT_PATH" -type f -name '*.smali' | wc -l)"
+        if [ "$DECODED_CLASS_COUNT" -ne "$EXPECTED_CLASS_COUNT" ]; then
+            LOGE "Incomplete decode for ${INPUT_FILE//$WORK_DIR/}: expected $EXPECTED_CLASS_COUNT classes, found $DECODED_CLASS_COUNT"
+            exit 1
+        fi
     fi
 
     # https://github.com/iBotPeaches/Apktool/issues/3615
@@ -171,6 +122,47 @@ DECODE()
             unzip -q "$INPUT_FILE" "res/*" -d "$OUTPUT_PATH/unknown"
         fi
     fi
+}
+
+# count_dex_classes <file>
+# Sums class_defs_size over every DEX stored in <file>, walking the logical DEX
+# chain inside each ZIP entry. Containers pack multiple DEX back to back, so a
+# single entry can hold more than one header.
+count_dex_classes()
+{
+    local FILE="$1"
+    local TOTAL=0
+    local DEX
+    local TMP
+    local CONTAINER_SIZE
+    local OFFSET
+    local FILE_SIZE
+    local CLASS_COUNT
+
+    while IFS= read -r DEX; do
+        TMP="$(mktemp)"
+        if ! unzip -p "$FILE" "$DEX" > "$TMP" 2> /dev/null; then
+            rm -f "$TMP"
+            continue
+        fi
+
+        CONTAINER_SIZE="$(stat -c %s "$TMP")"
+        OFFSET=0
+        while [ "$OFFSET" -lt "$CONTAINER_SIZE" ]; do
+            CLASS_COUNT="$(od -An -tu4 --endian=little \
+                -j $((OFFSET + 96)) -N 4 "$TMP" 2> /dev/null | tr -d ' ')"
+            [ "$CLASS_COUNT" ] || CLASS_COUNT="0"
+            TOTAL=$((TOTAL + CLASS_COUNT))
+
+            FILE_SIZE="$(od -An -tu4 --endian=little \
+                -j $((OFFSET + 32)) -N 4 "$TMP" 2> /dev/null | tr -d ' ')"
+            [ "$FILE_SIZE" -gt 0 ] 2> /dev/null || break
+            OFFSET=$((OFFSET + FILE_SIZE))
+        done
+        rm -f "$TMP"
+    done < <(zipinfo -1 "$FILE" 2> /dev/null | grep -E '^classes([0-9]+)?\.dex$')
+
+    echo "$TOTAL"
 }
 
 # https://github.com/google/smali/blob/3.0.9/dexlib2/src/main/java/com/android/tools/smali/dexlib2/VersionMap.java#L36-L53

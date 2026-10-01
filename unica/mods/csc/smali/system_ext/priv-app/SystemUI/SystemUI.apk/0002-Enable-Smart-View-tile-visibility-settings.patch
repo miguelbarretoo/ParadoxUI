@@ -1,0 +1,34 @@
+From fa0faa92bb96a9b8eea6f8287647bded901d1520 Mon Sep 17 00:00:00 2001
+From: Salvo Giangreco <giangrecosalvo9@gmail.com>
+Date: Fri, 17 Oct 2025 12:21:16 +0200
+Subject: [PATCH] Enable Smart View tile visibility settings on Android 16
+
+---
+ smali/com/android/systemui/QpRune.smali | 12 +-----------
+ 1 file changed, 1 insertion(+), 11 deletions(-)
+
+diff --git a/smali/com/android/systemui/QpRune.smali b/smali/com/android/systemui/QpRune.smali
+--- a/smali/com/android/systemui/QpRune.smali
++++ b/smali/com/android/systemui/QpRune.smali
+@@ -418,17 +418,7 @@
+ 
+     sput-boolean v4, Lcom/android/systemui/QpRune;->QUICK_TILE_FLASHLIGHT_INTENSITY:Z
+ 
+-    invoke-static {}, Lcom/samsung/android/feature/SemCscFeature;->getInstance()Lcom/samsung/android/feature/SemCscFeature;
+-
+-    move-result-object v4
+-
+-    const-string v5, "CscFeature_Common_SupportZProjectFunctionInGlobal"
+-
+-    invoke-virtual {v4, v5, v3}, Lcom/samsung/android/feature/SemCscFeature;->getBoolean(Ljava/lang/String;Z)Z
+-
+-    move-result v4
+-
+-    sput-boolean v4, Lcom/android/systemui/QpRune;->QUICK_TILE_HIDE_FROM_BAR:Z
++    sput-boolean v3, Lcom/android/systemui/QpRune;->QUICK_TILE_HIDE_FROM_BAR:Z
+ 
+     invoke-static {}, Lcom/samsung/android/feature/SemFloatingFeature;->getInstance()Lcom/samsung/android/feature/SemFloatingFeature;
+ 
+
+-- 
+2.51.1

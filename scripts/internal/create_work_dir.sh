@@ -24,7 +24,7 @@ TARGET_FIRMWARE_PATH="$(cut -d "/" -f 1 -s <<< "$TARGET_FIRMWARE")_$(cut -d "/" 
 
 COPY_SOURCE_FIRMWARE()
 {
-    local SOURCE_FOLDERS="odm product system prism optics"
+    local SOURCE_FOLDERS="product system"
     for f in $SOURCE_FOLDERS; do
         if [ -d "$FW_DIR/$SOURCE_FIRMWARE_PATH/$f" ]; then
             LOG "- Copying /$f from source firmware"
@@ -116,7 +116,7 @@ COPY_SOURCE_FIRMWARE()
 
 COPY_TARGET_FIRMWARE()
 {
-    local TARGET_FOLDERS="odm_dlkm system_dlkm vendor vendor_dlkm"
+    local TARGET_FOLDERS="odm odm_dlkm system_dlkm vendor vendor_dlkm"
     for f in $TARGET_FOLDERS; do
         if [ -d "$FW_DIR/$TARGET_FIRMWARE_PATH/$f" ]; then
             LOG "- Copying /$f from target firmware"

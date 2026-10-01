@@ -6,10 +6,10 @@ BUILD_KERNEL()
     local PARENT=$(pwd)
     cd $KERNEL_TMP_DIR
 
-    EVAL "./build.sh -m ${TARGET_CODENAME} -k y -r n"
+    ./build.sh -m ${TARGET_CODENAME} -k y -r n
 
     # Fixup for LTE devices
-    EVAL "./build.sh -m ${TARGET_CODENAME}lte -k n -r n -d y"
+    ./build.sh -m ${TARGET_CODENAME}lte -k n -r n -d y
 
     cd $PARENT
 }

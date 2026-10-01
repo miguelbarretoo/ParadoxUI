@@ -1,19 +1,5 @@
-#
-# Copyright (C) 2025 Salvo Giangreco
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
+# Copyright (c) 2025 Salvo Giangreco
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 # [
 source "$SRC_DIR/scripts/utils/build_utils.sh" || return 1
@@ -61,7 +47,7 @@ COMPARE_SEC_BUILD_VERSION()
 }
 
 # EXTRACT_FILE_FROM_TAR <tar> <file>
-# Extract the desidered file from the supplied tar archive.
+# Extract the desired file from the supplied tar archive.
 EXTRACT_FILE_FROM_TAR()
 {
     _CHECK_NON_EMPTY_PARAM "MODEL" "$MODEL" || return 1
@@ -98,8 +84,8 @@ EXTRACT_FILE_FROM_TAR()
     return 0
 }
 
-# EXTRACT_FILE_FROM_TAR <tar> <file>
-# Returns whether or not the desidered file exists in the supplied tar archive.
+# FILE_EXISTS_IN_TAR <tar> <file>
+# Returns whether or not the desired file exists in the supplied tar archive.
 FILE_EXISTS_IN_TAR()
 {
     _CHECK_NON_EMPTY_PARAM "TAR" "$1" || return 1
@@ -116,7 +102,9 @@ GET_LATEST_FIRMWARE()
     _CHECK_NON_EMPTY_PARAM "MODEL" "$1" || return 1
     _CHECK_NON_EMPTY_PARAM "CSC" "$2" || return 1
 
-    curl -s --retry 5 --retry-delay 5 "https://fota-cloud-dn.ospserver.net/firmware/$2/$1/version.xml" \
+    "$TOOLS_DIR/bin/samloader" check-update \
+        --model "$1" --region "$2" 2>/dev/null || \
+    curl -s --retry 3 -m 3 "https://fota-cloud-dn.ospserver.net/firmware/$2/$1/version.xml" \
         | perl -nE 'say $1 if /<latest[^>]*>(.*?)<\/latest>/'
 }
 
@@ -154,8 +142,10 @@ PARSE_FIRMWARE_STRING()
         LOGE "No IMEI/SN value found in \"$STRING\""
         return 1
     elif [[ "${#THIRD}" == "11" ]] && [[ "$THIRD" == "R"* ]]; then
+        # shellcheck disable=SC2034
         SERIAL_NO="$THIRD"
     elif [[ "${#THIRD}" -ge "8" ]] && [[ "${#THIRD}" -le "15" ]] && [[ "$THIRD" =~ ^[+-]?[0-9]+$ ]]; then
+        # shellcheck disable=SC2034
         # Allow uncomplete IMEIs as samloader can generate them by providing the first 8 numbers (TAC)
         IMEI="$THIRD"
     else
