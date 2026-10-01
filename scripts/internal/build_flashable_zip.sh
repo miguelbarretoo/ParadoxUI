@@ -483,14 +483,14 @@ PRINT_HEADER()
         ONEUI_VERSION="$MAJOR.$MINOR"
     fi
 
-    echo    'ui_print(" ");'
+ echo    'ui_print(" ");'
     echo    'ui_print("****************************************************");'
     echo -n 'ui_print("'
-    echo -n "Welcome to ArtisanROM $ROM_CODENAME $ROM_VERSION for $TARGET_NAME!"
+    echo -n "Welcome to ParadoxUI $ROM_CODENAME $ROM_VERSION for $TARGET_NAME!"
     echo    '");'
-    echo    'ui_print("ArtisanROM developed by Android Artisan @XDAforums");'
-    echo    'ui_print("UN1CA build system coded by salvo_giangri @XDAforums");'
-    echo    'ui_print("Special thanks to all ArtisanROM Maintainers, Contribuitors and Testers");'
+    echo    'ui_print("ParadoxUI developed by MiguelBarreto7669 @XDAforums");'
+    echo    'ui_print("Initial UN1CA build system coded by salvo_giangri @XDAforums");'
+    echo    'ui_print("Special thanks to all ParadoxUI Maintainers, Contribuitors and Testers");'
     echo    'ui_print("****************************************************");'
     echo -n 'ui_print("'
     echo -n "One UI version: $ONEUI_VERSION"
@@ -502,6 +502,24 @@ PRINT_HEADER()
     echo -n "Target: $TARGET_FINGERPRINT"
     echo    '");'
     echo    'ui_print("****************************************************");'
+    echo    'ui_print("After installation, it is highly recommended to FORMAT DATA as follows:");'
+    echo    'ui_print("     Wipe -> Format Data");'
+    echo    'ui_print("Hint: FORMAT, not WIPE or FACTORY RESET!");'
+    echo    'ui_print(" ");'
+    echo    'ui_print("If you decide to not format, unexpected issues may occur and given support will be limited.");'
+    echo    'ui_print(" ");'
+    echo    'ui_print("If you wish to proceed with the installer, please press the Volume UP button.");'
+    echo    'ui_print("Otherwise, hold the Volume DOWN + POWER buttons for 7 seconds to force reboot.");'
+    echo    'assert(run_program("/sbin/sh", "-c", "while true; do getevent -lc 1 | grep -q -m1 '\''KEY_VOLUMEUP'\'' && exit 0; sleep 1; done"));'
+    echo    'ui_print("Volume UP detected. Proceeding!");'
+    echo 'ui_print("****************************************************");' 
+    echo 'ui_print("    ____                       __           __  ______");';
+    echo 'ui_print("   / __ \____ __________ _____/ /___  _  __/ / / /  _/");';
+    echo 'ui_print("  / /_/ / __ `/ ___/ __ `/ __  / __ \| |/_/ / / // /  ");';
+    echo 'ui_print(" / ____/ /_/ / /  / /_/ / /_/ / /_/ />  </ /_/ // /   ");';
+    echo 'ui_print("/_/    \__,_/_/   \__,_/\__,_/\____/_/|_|\____/___/   ");';
+    echo 'ui_print("     #DiveIntoTheParadox                              ");';
+    echo 'ui_print("****************************************************");'    
 }
 
 SIGN_IMAGE_WITH_AVB()
