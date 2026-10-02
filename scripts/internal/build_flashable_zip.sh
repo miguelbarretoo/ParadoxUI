@@ -20,11 +20,20 @@ TMP_DIR="$OUT_DIR/zip"
 # can override this with UNICA_BROTLI_QUALITY=6 (valid range: 0-11).
 BROTLI_QUALITY="${UNICA_BROTLI_QUALITY:-6}"
 
+# Set to false in a target config to get a signed flashable ZIP.
+TARGET_DISABLE_ZIP_SIGNING="${TARGET_DISABLE_ZIP_SIGNING:-true}"
+
+if ! $TARGET_DISABLE_ZIP_SIGNING && { ! $DEBUG || $ROM_IS_OFFICIAL; }; then
+    SIGN_ZIP=true
+else
+    SIGN_ZIP=false
+fi
+
 ROM_STATUS="UNOFFICIAL"
 $ROM_IS_OFFICIAL && ROM_STATUS="OFFICIAL"
 
 ZIP_FILE_SUFFIX="-sign.zip"
-$DEBUG && ! $ROM_IS_OFFICIAL && ZIP_FILE_SUFFIX=".zip"
+$SIGN_ZIP || ZIP_FILE_SUFFIX=".zip"
 
 ZIP_FILE_NAME="ParadoxUI_${ROM_STATUS}_${ROM_VERSION}_$(date +%Y%m%d)_${TARGET_CODENAME}${ZIP_FILE_SUFFIX}"
 while [ -f "$OUT_DIR/$ZIP_FILE_NAME" ]; do
@@ -657,7 +666,7 @@ EVAL "rm -f \"$TMP_DIR/rom.zip\"" || exit 1
 EVAL "cd \"$TMP_DIR\" && 7z a -tzip -mx=0 -mmt=$(nproc) $TMP_DIR/rom.zip -r *.patch.dat -ir!META-INF/com/android/* -i!*.new.dat -i!*.new.dat.br" || exit 1
 EVAL "cd \"$TMP_DIR\" && 7z a -tzip -mx=3 -mmt=$(nproc) $TMP_DIR/rom.zip -r * -xr!META-INF/com/android/* -x!*.new.dat -x!*.new.dat.br -x!*.patch.dat -x!rom.zip" || exit 1
 
-if ! $DEBUG || $ROM_IS_OFFICIAL; then
+if $SIGN_ZIP; then
     LOG "- Signing zip"
     EVAL "signapk -w \"$PUBLIC_KEY_PATH\" \"$PRIVATE_KEY_PATH\" \"$TMP_DIR/rom.zip\" \"$OUT_DIR/$ZIP_FILE_NAME\"" || exit 1
     rm -f "$TMP_DIR/rom.zip"
