@@ -149,6 +149,7 @@ if $BUILD_ROM; then
     if [ -d "$APKTOOL_DIR" ]; then
         LOG_STEP_IN true "Building APKs/JARs"
 
+        BUILD_PIDS=()
         while IFS= read -r f; do
             f="${f/$APKTOOL_DIR\//}"
             PARTITION="$(cut -d "/" -f 1 -s <<< "$f")"
@@ -157,10 +158,20 @@ if $BUILD_ROM; then
             else
                 "$SRC_DIR/scripts/apktool.sh" b "$PARTITION" "$(cut -d "/" -f 2- -s <<< "$f")" &
             fi
+            BUILD_PIDS+=("$!")
         done < <(find "$APKTOOL_DIR" -type d \( -name "*.apk" -o -name "*.jar" \))
 
-        # shellcheck disable=SC2046
-        wait $(jobs -p) || exit 1
+        BUILD_FAILED=0
+        for PID in "${BUILD_PIDS[@]}"; do
+            wait "$PID" || BUILD_FAILED=1
+        done
+
+        if [[ "$BUILD_FAILED" == "1" ]]; then
+            unset BUILD_PIDS
+            LOGE "One or more APK/JAR builds failed. See the errors above."
+            exit 1
+        fi
+        unset BUILD_PIDS BUILD_FAILED
 
         LOG_STEP_OUT
     fi
