@@ -22,11 +22,70 @@ SMALI_PATCH "system" "system/framework/framework.jar" \
     'newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;' \
     'return-object p0' \
     '    invoke-virtual {p1}, Landroid/content/Context;->getPackageName()Ljava/lang/String;\n\n    move-result-object p1\n\n    sput-object p1, Lio/mesalabs/unica/KnoxPatchHooks;->sPackageName:Ljava/lang/String;\n\n    return-object p0'
+# This overload already calls Context.getPackageName() into v0 to feed
+# Instrumentation.getFactory(), so we store v0 from that existing instruction
+# instead of guessing which parameter holds the Context: the descriptor lists
+# three parameters while the body passes p3 to Application.attach().
 SMALI_PATCH "system" "system/framework/framework.jar" \
     "smali/android/app/Instrumentation.smali" "replace" \
     'newApplication(Ljava/lang/ClassLoader;Ljava/lang/String;Landroid/content/Context;)Landroid/app/Application;' \
-    'return-object p0' \
-    '    invoke-virtual {p2}, Landroid/content/Context;->getPackageName()Ljava/lang/String;\n\n    move-result-object v0\n\n    sput-object v0, Lio/mesalabs/unica/KnoxPatchHooks;->sPackageName:Ljava/lang/String;\n\n    return-object p0'
+    'invoke-direct {p0, v0}, Landroid/app/Instrumentation;->getFactory(Ljava/lang/String;)Landroid/app/AppComponentFactory;' \
+    '    sput-object v0, Lio/mesalabs/unica/KnoxPatchHooks;->sPackageName:Ljava/lang/String;\n\n    invoke-direct {p0, v0}, Landroid/app/Instrumentation;->getFactory(Ljava/lang/String;)Landroid/app/AppComponentFactory;'
+
+# The register we store must be the one the getPackageName() call fills.
+# A mismatch only shows up as an ART VerifyError at boot, so fail the build.
+_KP_INSTR="$APKTOOL_DIR/system/framework/framework.jar/smali/android/app/Instrumentation.smali"
+for _KP_SIG in \
+    'newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;' \
+    'newApplication(Ljava/lang/ClassLoader;Ljava/lang/String;Landroid/content/Context;)Landroid/app/Application;'; do
+    _KP_COUNT="$(awk -v FN="$_KP_SIG" '
+        /^\.method/ && index($0, FN) { inside = 1 }
+        inside && /Context;->getPackageName\(\)Ljava\/lang\/String;/ { n++ }
+        inside && /^\.end method/ { inside = 0 }
+        END { print n + 0 }
+    ' "$_KP_INSTR")"
+    if [ "$_KP_COUNT" != "1" ]; then
+        LOG "! ERROR: Instrumentation.newApplication has $_KP_COUNT getPackageName() calls, expected 1"
+        return 1
+    fi
+
+    _KP_CTX="$(awk -v FN="$_KP_SIG" '
+        /^\.method/ && index($0, FN) { inside = 1 }
+        inside && /Application;->attach\(Landroid\/content\/Context;\)V/ {
+            sub(/.*\{/, "", $0); sub(/\}.*/, "", $0)
+            n = split($0, a, /[ ,]+/); print a[n]; exit
+        }
+        inside && /^\.end method/ { inside = 0 }
+    ' "$_KP_INSTR")"
+    _KP_GPN="$(awk -v FN="$_KP_SIG" '
+        /^\.method/ && index($0, FN) { inside = 1 }
+        inside && /Context;->getPackageName\(\)Ljava\/lang\/String;/ {
+            sub(/.*\{/, "", $0); sub(/\}.*/, "", $0)
+            n = split($0, a, /[ ,]+/); print a[n]; exit
+        }
+        inside && /^\.end method/ { inside = 0 }
+    ' "$_KP_INSTR")"
+    if [ -z "$_KP_CTX" ] || [ "$_KP_CTX" != "$_KP_GPN" ]; then
+        LOG "! ERROR: Instrumentation.newApplication calls getPackageName() on '$_KP_GPN' but attach() takes '$_KP_CTX'"
+        return 1
+    fi
+
+    _KP_MR="$(awk -v FN="$_KP_SIG" '
+        /^\.method/ && index($0, FN) { inside = 1 }
+        inside && /Context;->getPackageName\(\)Ljava\/lang\/String;/ && !seen { seen = 1 }
+        inside && seen && !got && /move-result-object / { print $2; got = 1; exit }
+        inside && /^\.end method/ { inside = 0 }
+    ' "$_KP_INSTR")"
+    _KP_SP="$(awk -v FN="$_KP_SIG" '
+        /^\.method/ && index($0, FN) { inside = 1 }
+        inside && /sput-object .*KnoxPatchHooks;->sPackageName/ { gsub(/,/, "", $2); print $2; exit }
+        inside && /^\.end method/ { inside = 0 }
+    ' "$_KP_INSTR")"
+    if [ -z "$_KP_SP" ] || [ "$_KP_MR" != "$_KP_SP" ]; then
+        LOG "! ERROR: Instrumentation.newApplication stored '$_KP_SP' but getPackageName() fills '$_KP_MR'"
+        return 1
+    fi
+done
 
 # Intercept both SystemProperties overloads. SemSystemProperties delegates to
 # these methods on One UI 9, so this covers Auto Blocker, Secure Folder,
