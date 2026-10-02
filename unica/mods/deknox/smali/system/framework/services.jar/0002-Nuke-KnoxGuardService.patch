@@ -1,0 +1,23 @@
+From f13d54b3964226dbc8e4d01af9b399b7d6851bc2 Mon Sep 17 00:00:00 2001
+From: Louis Poier <lpoier7@proton.me>
+Date: Sat, 21 Jun 2025 20:18:35 +0200
+Subject: [PATCH] Nuke KnoxGuardService
+
+---
+diff --git a/smali/com/android/server/SystemServer.smali b/smali/com/android/server/SystemServer.smali
+index 2d3a21e..cee5f76 100644
+--- a/smali/com/android/server/SystemServer.smali
++++ b/smali/com/android/server/SystemServer.smali
+@@ -10085,11 +10085,7 @@
+     :goto_58
+     invoke-virtual {v2}, Landroid/util/TimingsTraceLog;->traceEnd()V
+ 
+-    invoke-static {}, Landroid/os/FactoryTest;->isFactoryBinary()Z
+-
+-    move-result v0
+-
+-    if-nez v0, :cond_3a
++    goto :cond_3a
+ 
+     const-string/jumbo v0, "StartKnoxGuard"
+ 
