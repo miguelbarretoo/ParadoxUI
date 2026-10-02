@@ -492,7 +492,7 @@ PRINT_HEADER()
         ONEUI_VERSION="$MAJOR.$MINOR"
     fi
 
- echo    'ui_print(" ");'
+    echo    'ui_print(" ");'
     echo    'ui_print("****************************************************");'
     echo -n 'ui_print("'
     echo -n "Welcome to ParadoxUI $ROM_CODENAME $ROM_VERSION for $TARGET_NAME!"

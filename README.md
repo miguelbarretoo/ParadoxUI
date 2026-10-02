@@ -2,45 +2,30 @@
   <img loading="lazy" src="readme-res/banner.png"/>
 </h1>
 <p align="center">
-  <a href="https://github.com/ExtremeXT/MonsterROM/blob/fifteen/LICENSE"><img loading="lazy" src="https://img.shields.io/github/license/ExtremeXT/MonsterROM?style=for-the-badge&logo=github"/></a>
-  <a href="https://github.com/ExtremeXT/MonsterROM/commits/fifteen"><img loading="lazy" src="https://img.shields.io/github/last-commit/ExtremeXT/MonsterROM/fifteen?style=for-the-badge"/></a>
-  <a href="https://github.com/ExtremeXT/MonsterROM/stargazers"><img loading="lazy" src="https://img.shields.io/github/stars/ExtremeXT/MonsterROM?style=for-the-badge"/></a>
-  <a href="https://github.com/ExtremeXT/MonsterROM/graphs/contributors"><img loading="lazy" src="https://img.shields.io/github/contributors/ExtremeXT/MonsterROM?style=for-the-badge"/></a>
+  <a href="https://github.com/ExtremeXT/ParadoxUI/blob/fifteen/LICENSE"><img loading="lazy" src="https://img.shields.io/github/license/ExtremeXT/ParadoxUI?style=for-the-badge&logo=github"/></a>
+  <a href="https://github.com/ExtremeXT/ParadoxUI/commits/fifteen"><img loading="lazy" src="https://img.shields.io/github/last-commit/ExtremeXT/ParadoxUI/fifteen?style=for-the-badge"/></a>
+  <a href="https://github.com/ExtremeXT/ParadoxUI/stargazers"><img loading="lazy" src="https://img.shields.io/github/stars/ExtremeXT/ParadoxUI?style=for-the-badge"/></a>
+  <a href="https://github.com/ExtremeXT/ParadoxUI/graphs/contributors"><img loading="lazy" src="https://img.shields.io/github/contributors/ExtremeXT/ParadoxUI?style=for-the-badge"/></a>
 </p>
-<p align="center">MonsterROM Nexus is a work-in-progress custom firmware for Samsung Galaxy devices.</p>
+<p align="center">ParadoxUI Granite is a work-in-progress custom firmware for Samsung Galaxy devices.</p>
 
 <p align="center">
-  <a href="https://t.me/monsterrom">💬 Telegram</a>
-  <a href="https://github.com/ExtremeXT/MonsterROM/wiki">📖 Wiki</a>
-  <a href="https://github.com/ExtremeXT/MonsterROM/blob/fifteen/CHANGELOG.md">📝 Changelog</a>
-  <a href="https://github.com/ExtremeXT/MonsterROM/blob/fifteen/MAINTAINERS">🧑‍💻 Maintainers</a>
+  <a href="https://t.me/ParadoxUI">💬 Telegram</a>
+  <a href="https://github.com/ExtremeXT/ParadoxUI/wiki">📖 Wiki</a>
+  <a href="https://github.com/ExtremeXT/ParadoxUI/blob/fifteen/CHANGELOG.md">📝 Changelog</a>
+  <a href="https://github.com/ExtremeXT/ParadoxUI/blob/fifteen/MAINTAINERS">🧑‍💻 Maintainers</a>
 </p>
 
-# What is MonsterROM Nexus?
-MonsterROM Nexus is a work-in-progress custom firmware for Samsung Galaxy devices.
+# What is ParadoxUI Granite?
+ParadoxUI Granite is a work-in-progress custom firmware for Samsung Galaxy devices.
 
 It's based on the latest and greatest iteration of Samsung's UX and it also includes additional features and tweaks to ensure the best possible experience out of the box.
 
 It is based on the UN1CA build system which allows automatic downloading/extraction of the firmware, applying the required patches and generating a flashable zip package for the specified target device.
 
-MonsterROM Nexus supports devices using the Exynos 9820, Exynos 990, Exynos 2100 and Exynos 2200 SoCs
+ParadoxUI Granite supports devices using the Exynos 9820, Exynos 990, Exynos 2100 and Exynos 2200 SoCs
 
 Any form of contribution, suggestions, bug report or feature request for the project will be welcome.
-
-# EOL Notice
-As of 04-01-2026, MonsterROM is officially considered end of life until further notice.
-
-I reserve all rights to this project and any future continuations or spin-offs.
-
-No updates or support will be provided, but the repository will remain archived publicly.
-
-This notice does NOT change the GPLv3 license of this project.
-
-The unfinished/WIP sixteen branch has also been published for any developer that wishes to utilize code from it, while faithfully adhering to the GPLv3 licensing etiquette.
-
-I wish to thank everyone for the support given during the lifetime of this project. Thanks to all maintainers and users for everything.
-
-This branch is unfinished and will NOT build.
 
 # Features
 - Based on the latest stable OneUI 7 Galaxy S25 FE firmware
@@ -72,7 +57,7 @@ This branch is unfinished and will NOT build.
 - More that I can't remember right now and will have to be added in the future
 
 # Bugs
-See the <a href="https://github.com/ExtremeXT/MonsterROM/issues">⚠ Issues</a> tab
+See the <a href="https://github.com/ExtremeXT/ParadoxUI/issues">⚠ Issues</a> tab
 
 # Licensing
 This project is licensed under the terms of the [GNU General Public License v3.0](LICENSE). External dependencies might be distributed under a different license, such as:
@@ -125,14 +110,14 @@ A big thanks goes to the following for their invaluable contributions in no part
 - **[Renox](https://github.com/renoxtv)** for overlay patches and testing
 - **[Ksawlii](https://github.com/Ksawlii)** for updating the build system and FOD animation patch
 - **[nalz0](https://github.com/nalz0)** for Multi-User support
-- **[EndaDwagon](https://github.com/EndaDwagon)** for the big majority of the MonsterROM Wiki
+- **[EndaDwagon](https://github.com/EndaDwagon)** for the big majority of the ParadoxUI Wiki
 - **[Oskar](https://github.com/osrott61-gh)** for Odinpacks, Building before we started using CI, Wiki
 - **[Mesazane](https://github.com/Mesazane)** for Building before we started using CI
 - **[Dupa](https://github.com/dupazlasu)** for Maintaining S22 Series (ROM + Kernel)
 - **[RayShocker](https://github.com/RayShocker)** for HRM fix
 - **[Szucsy92](https://github.com/Szucsy92)** for SingleTake fix
 - **[Kurt](https://github.com/kurtbahartr)** for ASCII art and some minor fixes
-- **@april865** (TG) for MonsterROM Nexus banner
+- **@april865** (TG) for ParadoxUI Granite banner
 - And everyone else who aided in testing, wiki, translations etc!
 
 Original UN1CA credits:
@@ -156,4 +141,4 @@ Original UN1CA credits:
 - 2200 Device Tree Code (Maintainer: @dupazlasu): https://github.com/dupazlasu/android_device_samsung_s5e9925
 
 # Stargazers over time
-[![Stargazers over time](https://starchart.cc/ExtremeXT/MonsterROM.svg)](https://starchart.cc/ExtremeXT/MonsterROM)
+[![Stargazers over time](https://starchart.cc/ExtremeXT/ParadoxUI.svg)](https://starchart.cc/ExtremeXT/ParadoxUI)
