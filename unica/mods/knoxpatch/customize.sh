@@ -32,8 +32,6 @@ SMALI_PATCH "system" "system/framework/framework.jar" \
     'invoke-direct {p0, v0}, Landroid/app/Instrumentation;->getFactory(Ljava/lang/String;)Landroid/app/AppComponentFactory;' \
     '    sput-object v0, Lio/mesalabs/unica/KnoxPatchHooks;->sPackageName:Ljava/lang/String;\n\n    invoke-direct {p0, v0}, Landroid/app/Instrumentation;->getFactory(Ljava/lang/String;)Landroid/app/AppComponentFactory;'
 
-# The register we store must be the one the getPackageName() call fills.
-# A mismatch only shows up as an ART VerifyError at boot, so fail the build.
 _KP_INSTR="$APKTOOL_DIR/system/framework/framework.jar/smali/android/app/Instrumentation.smali"
 for _KP_SIG in \
     'newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;' \
@@ -83,6 +81,18 @@ for _KP_SIG in \
     ' "$_KP_INSTR")"
     if [ -z "$_KP_SP" ] || [ "$_KP_MR" != "$_KP_SP" ]; then
         LOG "! ERROR: Instrumentation.newApplication stored '$_KP_SP' but getPackageName() fills '$_KP_MR'"
+        return 1
+    fi
+done
+
+# Members of KnoxPatchHooks are called from other classes (Instrumentation
+# writes the package name, SystemProperties and EnterpriseDeviceManager call
+# in). A non-public one only fails at runtime with IllegalAccessError, so
+# check the declarations before building.
+_KP_HOOKS="$APKTOOL_DIR/system/framework/framework.jar/smali_classes6/io/mesalabs/unica/KnoxPatchHooks.smali"
+for _KP_MEM in sPackageName onSystemPropertiesGet shouldDisableKnoxSdk; do
+    if ! grep -qE "^\.(field|method) public .*[ ]${_KP_MEM}" "$_KP_HOOKS"; then
+        LOG "! ERROR: KnoxPatchHooks.${_KP_MEM} is not public but is accessed from another class"
         return 1
     fi
 done

@@ -4,7 +4,7 @@
 
 
 # static fields
-.field private static volatile blacklist sPackageName:Ljava/lang/String;
+.field public static volatile blacklist sPackageName:Ljava/lang/String;
 
 .field private static volatile blacklist sSpoofBootState:Z
 
