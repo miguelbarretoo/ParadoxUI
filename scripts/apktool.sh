@@ -279,7 +279,17 @@ PREPARE_SCRIPT "$@"
 if [ ! "$FRAMEWORK_TAG" ]; then
     LOGE "Work dir needs to be set up before using this script"
     exit 1
-elif [ ! -f "$FRAMEWORK_DIR/1-$FRAMEWORK_TAG.apk" ]; then
+fi
+
+if [ -d "$FRAMEWORK_DIR" ]; then
+    while IFS= read -r stale; do
+        LOGW "Removing stale framework: ${stale##*/}"
+        rm -f "$stale"
+    done < <(find "$FRAMEWORK_DIR" -maxdepth 1 -type f -name "1-*.apk" \
+        ! -name "1-$FRAMEWORK_TAG.apk")
+fi
+
+if [ ! -f "$FRAMEWORK_DIR/1-$FRAMEWORK_TAG.apk" ]; then
     LOGW "framework-res.apk for \"$FRAMEWORK_TAG\" not found, installing"
     EVAL "apktool if -p \"$FRAMEWORK_DIR\" -t \"$FRAMEWORK_TAG\" \"$WORK_DIR/system/system/framework/framework-res.apk\"" || exit 1
 fi
