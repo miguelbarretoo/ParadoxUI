@@ -28,10 +28,10 @@ ParadoxUI Granite supports devices using the Exynos 9820, Exynos 990, Exynos 210
 Any form of contribution, suggestions, bug report or feature request for the project will be welcome.
 
 # Features
-- Based on the latest stable OneUI 7 Galaxy S25 FE firmware
-- All software features from S25 FE
-- S25 Ultra CSC, ringtones and more
-- Moderately Debloated
+- Based on the latest stable OneUI 8.5 Galaxy S26+ firmware
+- All software features from S26+
+- S26 Ultra CSC, ringtones and more
+- Heavily Debloated
 - Heavily DeKnoxed
 - Full SELinux Support
 - Full Galaxy AI support
