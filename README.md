@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img loading="lazy" src="readme-res/banner.png"/>
+  <img loading="lazy" src="readme-res/banner-granite.png"/>
 </h1>
 <p align="center">
   <a href="https://github.com/ExtremeXT/ParadoxUI/blob/fifteen/LICENSE"><img loading="lazy" src="https://img.shields.io/github/license/ExtremeXT/ParadoxUI?style=for-the-badge&logo=github"/></a>
